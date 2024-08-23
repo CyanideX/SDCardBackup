@@ -6,6 +6,13 @@ from tkinter import simpledialog, messagebox
 from tkinter.ttk import Progressbar
 import getpass
 
+def center_window(window, width, height):
+    screen_width = window.winfo_screenwidth()
+    screen_height = window.winfo_screenheight()
+    x = (screen_width // 2) - (width // 2)
+    y = (screen_height // 2) - (height // 2)
+    window.geometry(f'{width}x{height}+{x}+{y}')
+
 def backup_sd_card(sd_card_path, pictures_backup_path, videos_backup_path, backup_name):
     current_datetime = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_folder_name = f"{backup_name}_{current_datetime}"
@@ -29,9 +36,9 @@ def backup_sd_card(sd_card_path, pictures_backup_path, videos_backup_path, backu
     video_files_copied += copy_directory(sub_source, os.path.join(videos_destination, "SUB"))
 
     if verify_backup(dcim_source, pictures_destination) and verify_backup(clip_source, os.path.join(videos_destination, "CLIP")) and verify_backup(sub_source, os.path.join(videos_destination, "SUB")):
-        messagebox.showinfo("Backup Complete", f"All files have been backed up and verified successfully.\n\nPhotos backed up: {photo_files_copied}\nVideos backed up: {video_files_copied}")
+        messagebox.showinfo("Backup Complete", f"All files have been backed up and verified successfully.\n\nPhotos backed up: {photo_files_copied}\nVideos backed up: {video_files_copied}", parent=root)
     else:
-        messagebox.showwarning("Backup Incomplete", "Some files were not backed up correctly.")
+        messagebox.showwarning("Backup Incomplete", "Some files were not backed up correctly.", parent=root)
 
     start_button.config(text="Done", state=tk.DISABLED)
     root.after(1000, root.destroy)
@@ -100,7 +107,7 @@ root.title("SD Card Backup")
 # Set window dimensions
 window_width = 400
 window_height = 120
-root.geometry(f"{window_width}x{window_height}")
+center_window(root, window_width, window_height)
 
 progress_bar = Progressbar(root, orient="horizontal", length=300, mode="determinate")
 progress_bar.pack(pady=20, padx=40)
