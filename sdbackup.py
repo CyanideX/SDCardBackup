@@ -4,6 +4,7 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import simpledialog, messagebox
 from tkinter.ttk import Progressbar
+import getpass
 
 def backup_sd_card(sd_card_path, pictures_backup_path, videos_backup_path, backup_name):
     current_datetime = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -78,22 +79,28 @@ def start_backup():
     sd_card_path = find_sd_card()
     if sd_card_path:
         print(f"Detected SD card at {sd_card_path}")
-        backup_name = simpledialog.askstring("Backup Name", "Enter a name for the backup:")
+        backup_name = simpledialog.askstring("Backup Name", "Enter a name for the backup:", parent=root)
         if backup_name:
             backup_name = backup_name.replace(" ", "-")
             backup_sd_card(sd_card_path, pictures_backup_path, videos_backup_path, backup_name)
         else:
-            messagebox.showwarning("No Backup Name", "No backup name provided. Backup cancelled.")
+            messagebox.showwarning("No Backup Name", "No backup name provided. Backup cancelled.", parent=root)
     else:
-        messagebox.showwarning("No SD Card Found", "No SD card with the required folders found.")
+        messagebox.showwarning("No SD Card Found", "No SD card with the required folders found.", parent=root)
 
-# Define the paths -- raplace {username} with your user folder name
-pictures_backup_path = r"C:\Users\{username}\Pictures\AUTO_DUMP"
-videos_backup_path = r"C:\Users\{username}\Videos\AUTO_DUMP"
+# Automatically detect the user's folder for storing backups
+username = getpass.getuser()
+pictures_backup_path = os.path.join(f"C:\\Users\\{username}\\Pictures\\AUTO_DUMP")
+videos_backup_path = os.path.join(f"C:\\Users\\{username}\\Videos\\AUTO_DUMP")
 
 # Create the GUI
 root = tk.Tk()
 root.title("SD Card Backup")
+
+# Set window dimensions
+window_width = 400
+window_height = 175
+root.geometry(f"{window_width}x{window_height}")
 
 progress_bar = Progressbar(root, orient="horizontal", length=300, mode="determinate")
 progress_bar.pack(pady=20, padx=20)
