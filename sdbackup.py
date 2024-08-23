@@ -99,11 +99,11 @@ root.title("SD Card Backup")
 
 # Set window dimensions
 window_width = 400
-window_height = 175
+window_height = 120
 root.geometry(f"{window_width}x{window_height}")
 
 progress_bar = Progressbar(root, orient="horizontal", length=300, mode="determinate")
-progress_bar.pack(pady=20, padx=20)
+progress_bar.pack(pady=20, padx=40)
 
 start_button = tk.Button(root, text="Start Backup", command=start_backup)
 start_button.pack(pady=10)
