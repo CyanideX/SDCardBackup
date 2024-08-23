@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import simpledialog, messagebox
 from tkinter.ttk import Progressbar
 import getpass
+import logging
 
 def center_window(window, width, height):
     screen_width = window.winfo_screenwidth()
@@ -12,6 +13,10 @@ def center_window(window, width, height):
     x = (screen_width // 2) - (width // 2)
     y = (screen_height // 2) - (height // 2)
     window.geometry(f'{width}x{height}+{x}+{y}')
+
+def get_free_space(folder):
+    total, used, free = shutil.disk_usage(folder)
+    return free
 
 def backup_sd_card(sd_card_path, pictures_backup_path, videos_backup_path, backup_name):
     current_datetime = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -28,17 +33,31 @@ def backup_sd_card(sd_card_path, pictures_backup_path, videos_backup_path, backu
     os.makedirs(videos_destination, exist_ok=True)
 
     total_files = count_files(dcim_source) + count_files(clip_source) + count_files(sub_source)
+    total_size = get_directory_size(dcim_source) + get_directory_size(clip_source) + get_directory_size(sub_source)
+    free_space = get_free_space(pictures_backup_path)
+
+    if total_size > free_space:
+        messagebox.showerror("Insufficient Space", "There is not enough free space to complete the backup.")
+        logging.error("Insufficient space for backup.")
+        return
+
     progress_bar['maximum'] = total_files
     progress_bar['value'] = 0
 
-    photo_files_copied = copy_directory(dcim_source, pictures_destination)
-    video_files_copied = copy_directory(clip_source, os.path.join(videos_destination, "CLIP"))
-    video_files_copied += copy_directory(sub_source, os.path.join(videos_destination, "SUB"))
+    try:
+        photo_files_copied = copy_directory(dcim_source, pictures_destination)
+        video_files_copied = copy_directory(clip_source, os.path.join(videos_destination, "CLIP"))
+        video_files_copied += copy_directory(sub_source, os.path.join(videos_destination, "SUB"))
 
-    if verify_backup(dcim_source, pictures_destination) and verify_backup(clip_source, os.path.join(videos_destination, "CLIP")) and verify_backup(sub_source, os.path.join(videos_destination, "SUB")):
-        messagebox.showinfo("Backup Complete", f"All files have been backed up and verified successfully.\n\nPhotos backed up: {photo_files_copied}\nVideos backed up: {video_files_copied}", parent=root)
-    else:
-        messagebox.showwarning("Backup Incomplete", "Some files were not backed up correctly.", parent=root)
+        if verify_backup(dcim_source, pictures_destination) and verify_backup(clip_source, os.path.join(videos_destination, "CLIP")) and verify_backup(sub_source, os.path.join(videos_destination, "SUB")):
+            messagebox.showinfo("Backup Complete", f"All files have been backed up and verified successfully.\n\nPhotos backed up: {photo_files_copied}\nVideos backed up: {video_files_copied}", parent=root)
+            logging.info("Backup completed successfully.")
+        else:
+            messagebox.showwarning("Backup Incomplete", "Some files were not backed up correctly.", parent=root)
+            logging.warning("Backup incomplete. Some files were not backed up correctly.")
+    except Exception as e:
+        messagebox.showerror("Backup Failed", f"An error occurred during the backup: {e}", parent=root)
+        logging.error(f"Backup failed: {e}")
 
     start_button.config(text="Done", state=tk.DISABLED)
     root.after(1000, root.destroy)
@@ -48,6 +67,13 @@ def count_files(directory):
     for root, dirs, files in os.walk(directory):
         file_count += len(files)
     return file_count
+
+def get_directory_size(directory):
+    total_size = 0
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            total_size += os.path.getsize(os.path.join(root, file))
+    return total_size
 
 def copy_directory(source, destination):
     files_copied = 0
@@ -62,8 +88,10 @@ def copy_directory(source, destination):
                 progress_bar.update()
                 files_copied += 1
         print(f"Copied {source} contents to {destination}")
+        logging.info(f"Copied {source} contents to {destination}")
     else:
         print(f"Folder not found at {source}")
+        logging.warning(f"Folder not found at {source}")
     return files_copied
 
 def verify_backup(source, destination):
@@ -99,6 +127,9 @@ def start_backup():
 username = getpass.getuser()
 pictures_backup_path = os.path.join(f"C:\\Users\\{username}\\Pictures\\AUTO_DUMP")
 videos_backup_path = os.path.join(f"C:\\Users\\{username}\\Videos\\AUTO_DUMP")
+
+# Set up logging
+logging.basicConfig(filename='backup_log.txt', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Create the GUI
 root = tk.Tk()
