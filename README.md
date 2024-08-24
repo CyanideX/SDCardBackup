@@ -1,6 +1,8 @@
 # SDCardBackup
  Automatically backup SD cards for Sony mirrorless cameras.
 
+ ![sdbackup_demo](https://github.com/user-attachments/assets/3445f857-5937-4d63-ad13-507aa9f38f31)
+
  # Compiling source to EXE
 
 Here's how you can do it:
