@@ -3,6 +3,14 @@
 
  ![sdbackup_demo](https://github.com/user-attachments/assets/3445f857-5937-4d63-ad13-507aa9f38f31)
 
+SD Card Backup utomatically detects Sony structured SD cards, prompts user for backup name, and copies images to user's photo folder and the videos to the user's videos folder.
+
+- Files are copied into folders labelled with the backup name, date, and time.
+- Files are verified after copy, including number of files and sizes.
+- Storage space is checked before copying.
+- Confirmation popup after process completes with total files copied.
+- Log saved next to program.
+
  # Compiling source to EXE
 
 Here's how you can do it:
