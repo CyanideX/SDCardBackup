@@ -29,9 +29,6 @@ def backup_sd_card(sd_card_path, pictures_backup_path, videos_backup_path, backu
     pictures_destination = os.path.join(pictures_backup_path, backup_folder_name)
     videos_destination = os.path.join(videos_backup_path, backup_folder_name)
 
-    os.makedirs(pictures_destination, exist_ok=True)
-    os.makedirs(videos_destination, exist_ok=True)
-
     total_files = count_files(dcim_source) + count_files(clip_source) + count_files(sub_source)
     total_size = get_directory_size(dcim_source) + get_directory_size(clip_source) + get_directory_size(sub_source)
     free_space = get_free_space(pictures_backup_path)
@@ -41,13 +38,32 @@ def backup_sd_card(sd_card_path, pictures_backup_path, videos_backup_path, backu
         logging.error("Insufficient space for backup.")
         return
 
+    sd_card_files = get_all_files(dcim_source) | get_all_files(clip_source) | get_all_files(sub_source)
+    auto_dump_files = get_all_files(pictures_backup_path) | get_all_files(videos_backup_path)
+
+    existing_files_detected = sd_card_files & auto_dump_files
+    if existing_files_detected:
+        response = messagebox.askyesnocancel("Files Already Exist", "Some files already exist in the backup directory. Do you want to continue? (Yes: Copy all files, No: Copy only new files, Cancel: Cancel backup)")
+        if response is None:
+            logging.info("Backup cancelled by user due to existing files.")
+            return
+        elif not response:
+            copy_only_new_files = True
+        else:
+            copy_only_new_files = False
+    else:
+        copy_only_new_files = False
+
+    os.makedirs(pictures_destination, exist_ok=True)
+    os.makedirs(videos_destination, exist_ok=True)
+
     progress_bar['maximum'] = total_files
     progress_bar['value'] = 0
 
     try:
-        photo_files_copied = copy_directory(dcim_source, pictures_destination)
-        video_files_copied = copy_directory(clip_source, os.path.join(videos_destination, "CLIP"))
-        video_files_copied += copy_directory(sub_source, os.path.join(videos_destination, "SUB"))
+        photo_files_copied = copy_directory(dcim_source, pictures_destination, copy_only_new_files, auto_dump_files)
+        video_files_copied = copy_directory(clip_source, os.path.join(videos_destination, "CLIP"), copy_only_new_files, auto_dump_files)
+        video_files_copied += copy_directory(sub_source, os.path.join(videos_destination, "SUB"), copy_only_new_files, auto_dump_files)
 
         if verify_backup(dcim_source, pictures_destination) and verify_backup(clip_source, os.path.join(videos_destination, "CLIP")) and verify_backup(sub_source, os.path.join(videos_destination, "SUB")):
             messagebox.showinfo("Backup Complete", f"All files have been backed up and verified successfully.\n\nPhotos backed up: {photo_files_copied}\nVideos backed up: {video_files_copied}", parent=root)
@@ -75,7 +91,14 @@ def get_directory_size(directory):
             total_size += os.path.getsize(os.path.join(root, file))
     return total_size
 
-def copy_directory(source, destination):
+def get_all_files(directory):
+    files_set = set()
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            files_set.add(file)
+    return files_set
+
+def copy_directory(source, destination, copy_only_new_files, existing_files):
     files_copied = 0
     if os.path.exists(source):
         for root, dirs, files in os.walk(source):
@@ -83,10 +106,11 @@ def copy_directory(source, destination):
                 src_file = os.path.join(root, file)
                 dst_file = os.path.join(destination, os.path.relpath(src_file, source))
                 os.makedirs(os.path.dirname(dst_file), exist_ok=True)
-                shutil.copy2(src_file, dst_file)
-                progress_bar['value'] += 1
-                progress_bar.update()
-                files_copied += 1
+                if not copy_only_new_files or file not in existing_files:
+                    shutil.copy2(src_file, dst_file)
+                    progress_bar['value'] += 1
+                    progress_bar.update()
+                    files_copied += 1
         print(f"Copied {source} contents to {destination}")
         logging.info(f"Copied {source} contents to {destination}")
     else:
@@ -106,7 +130,11 @@ def verify_backup(source, destination):
 def find_sd_card():
     drives = [f"{chr(x)}:\\" for x in range(65, 91) if os.path.exists(f"{chr(x)}:\\")]
     for drive in drives:
-        if all(os.path.exists(os.path.join(drive, folder)) for folder in ["AVF_INFO", "DCIM", "PRIVATE"]):
+        avf_info_exists = os.path.exists(os.path.join(drive, "AVF_INFO"))
+        dcim_exists = os.path.exists(os.path.join(drive, "DCIM"))
+        private_exists = os.path.exists(os.path.join(drive, "PRIVATE"))
+        
+        if avf_info_exists and (dcim_exists or private_exists):
             return drive
     return None
 
